@@ -16,9 +16,9 @@ const SECRET_KEY = config.jwt.secretKey;
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-let users = []; // 임시 사용자 저장소
+let users = []; //사용자 회원가입 정보 저장
 
-// "/" 요청 시 회원가입 페이지 띄우기
+//signup페이지 보내기
 app.get("/", (req, res) => {
   fs.readFile(path.join(__dirname, "signup.html"), (err, data) => {
     if (err) {
@@ -30,15 +30,7 @@ app.get("/", (req, res) => {
   });
 });
 
-// 회원가입 페이지
-app.get("/signup", (req, res) => {
-  fs.readFile(path.join(__dirname, "signup.html"), (err, data) => {
-    if (err) return res.status(500).send("파일 읽기 오류");
-    res.status(200).set({ "Content-Type": "text/html" }).send(data);
-  });
-});
-
-// 회원가입 처리
+//signup 처리
 app.post("/signup", async (req, res) => {
   const { userid, name, passwd, email } = req.body;
 
@@ -48,7 +40,7 @@ app.post("/signup", async (req, res) => {
   res.redirect("/login");
 });
 
-// 로그인 페이지
+//login페이지 보내기
 app.get("/login", (req, res) => {
   fs.readFile(path.join(__dirname, "login.html"), (err, data) => {
     if (err) return res.status(500).send("파일 읽기 오류");
@@ -56,7 +48,7 @@ app.get("/login", (req, res) => {
   });
 });
 
-// 로그인 처리
+//login 처리
 app.post("/login", async (req, res) => {
   const { userid, passwd } = req.body;
   const user = users.find((u) => u.userid === userid);
@@ -88,7 +80,7 @@ app.post("/login", async (req, res) => {
   res.redirect(`/result?userid=${user.userid}&token=${token}`);
 });
 
-// 결과 페이지
+//결과 출력
 app.get("/result", (req, res) => {
   const { userid, token } = req.query;
 
