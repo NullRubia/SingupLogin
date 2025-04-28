@@ -3,10 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <title>로그인 결과</title>
+    <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <h2>로그인 성공!</h2>
-    <p>로그인한 아이디: {{userid}}</p>
-    <p>JWT 토큰: {{token}}</p>
+    <div class="container">
+      <h2>로그인 성공!</h2>
+      <p>로그인한 아이디: <strong>{{userid}}</strong></p>
+      <p>JWT 토큰: <strong>{{token}}</strong></p>
+    </div>
   </body>
 </html>
