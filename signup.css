@@ -1,0 +1,45 @@
+body {
+  font-family: "Pretendard", "Noto Sans KR", sans-serif;
+  background: #e3f2fd;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  width: 400px;
+  margin: 70px auto;
+  background: #fff;
+  padding: 35px;
+  border-radius: 14px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+h2 {
+  margin-bottom: 25px;
+  color: #1976d2;
+}
+
+input {
+  width: 90%;
+  padding: 14px;
+  margin: 12px 0;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+}
+
+button {
+  width: 95%;
+  padding: 14px;
+  margin-top: 18px;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1565c0;
+}

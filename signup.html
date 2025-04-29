@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <title>회원가입</title>
-    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./signup.css" />
   </head>
   <body>
     <div class="container">
@@ -16,5 +16,10 @@
         <button type="submit">가입하기</button>
       </form>
     </div>
+    <script>
+      // 페이지 로드 시 localStorage의 JWT 토큰 초기화
+      localStorage.removeItem("token");
+      console.log("JWT 토큰 초기화됨");
+    </script>
   </body>
 </html>

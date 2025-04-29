@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <title>로그인</title>
-    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./login.css" />
   </head>
   <body>
     <div class="container">
@@ -13,6 +13,33 @@
         <input type="password" name="passwd" placeholder="비밀번호" required />
         <button type="submit">로그인</button>
       </form>
+      <button id="view-posts">게시물 보기</button>
     </div>
+
+    <script>
+      document.getElementById("view-posts").addEventListener("click", () => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          alert("로그인이 필요합니다.");
+          return;
+        }
+
+        fetch("/posts", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error("인증 실패");
+            return res.text();
+          })
+          .then((html) => {
+            document.open();
+            document.write(html);
+            document.close();
+          })
+          .catch(() => alert("토큰 인증 실패 또는 로그인 다시 필요"));
+      });
+    </script>
   </body>
 </html>
