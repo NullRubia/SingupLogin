@@ -2,6 +2,7 @@
 
 #node.js
 node_modules/
+old/
 package-lock.json
 
 # MACOS
