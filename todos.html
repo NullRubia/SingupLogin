@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>할일 목록</title>
+    <link rel="stylesheet" href="./todos.css" />
+  </head>
+  <body>
+    <h2>할일 목록</h2>
+    <form id="todoForm">
+      <input type="text" id="newTodo" required />
+      <button type="submit">추가</button>
+    </form>
+    <ul id="todoList"></ul>
+
+    <script>
+      const token = localStorage.getItem("token");
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+
+      let currentUser = "";
+
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        currentUser = payload.userid;
+      } catch (e) {
+        alert("토큰 오류. 다시 로그인 해주세요.");
+        location.href = "/login";
+      }
+
+      async function loadTodos() {
+        const res = await fetch("/api/todos", { headers });
+        const todos = await res.json();
+        const list = document.getElementById("todoList");
+        list.innerHTML = "";
+        todos.forEach((todo) => {
+          const li = document.createElement("li");
+
+          const editable = todo.userid === currentUser;
+
+          li.innerHTML = `
+          <div class="todo-item">
+            <span class="author">${todo.userid}</span>
+            <span class="dos" contenteditable="false">${todo.dos}</span>
+            <div class="actions">
+              ${
+                editable
+                  ? `<button class="edit" data-id="${todo.idx}">수정</button>
+                   <button class="save hidden" data-id="${todo.idx}">저장</button>
+                   <button class="del" data-id="${todo.idx}">삭제</button>`
+                  : `<button class="edit" data-id="${todo.idx}">수정</button>
+                   <button class="del" data-id="${todo.idx}">삭제</button>`
+              }
+            </div>
+          </div>
+        `;
+          list.appendChild(li);
+        });
+      }
+
+      document
+        .getElementById("todoForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const dos = document.getElementById("newTodo").value;
+          await fetch("/api/todos", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ dos }),
+          });
+          document.getElementById("newTodo").value = "";
+          loadTodos();
+        });
+
+      document
+        .getElementById("todoList")
+        .addEventListener("click", async (e) => {
+          const id = e.target.dataset.id;
+          const li = e.target.closest("li");
+          const span = li.querySelector(".dos");
+
+          if (e.target.classList.contains("edit")) {
+            if (!checkOwnership(li)) return;
+            span.contentEditable = true;
+            span.focus();
+            toggleButtons(li, true);
+          }
+
+          if (e.target.classList.contains("save")) {
+            if (!checkOwnership(li)) return;
+            const dos = span.innerText;
+            await fetch(`/api/todos/${id}`, {
+              method: "PUT",
+              headers,
+              body: JSON.stringify({ dos }),
+            });
+            span.contentEditable = false;
+            toggleButtons(li, false);
+            loadTodos();
+          }
+
+          if (e.target.classList.contains("del")) {
+            if (!checkOwnership(li)) return;
+            await fetch(`/api/todos/${id}`, {
+              method: "DELETE",
+              headers,
+            });
+            loadTodos();
+          }
+        });
+
+      function checkOwnership(li) {
+        const owner = li.querySelector(".author").innerText;
+        if (owner !== currentUser) {
+          alert("본인이 작성한 게시글만 수정/삭제할 수 있습니다.");
+          return false;
+        }
+        return true;
+      }
+
+      function toggleButtons(li, editing) {
+        const editBtn = li.querySelector(".edit");
+        const saveBtn = li.querySelector(".save");
+        if (editing) {
+          editBtn.classList.add("hidden");
+          saveBtn.classList.remove("hidden");
+        } else {
+          editBtn.classList.remove("hidden");
+          saveBtn.classList.add("hidden");
+        }
+      }
+
+      loadTodos();
+    </script>
+  </body>
+</html>

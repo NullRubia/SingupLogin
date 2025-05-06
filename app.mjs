@@ -1,100 +1,150 @@
 import express from "express";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { config } from "./config.mjs";
-import { posts } from "./post.mjs";
+import {
+  getUsers,
+  createUser,
+  getAllTodos,
+  createTodo,
+  updateTodo,
+  deleteTodo,
+  getTodoById,
+} from "./todosRepository.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 const app = express();
 const PORT = config.host.port;
 const SECRET_KEY = config.jwt.secretKey;
 
-app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-let users = [];
-
-// signup 페이지 넘겨주기
+// 회원가입 페이지
 app.get("/", (req, res) => {
   fs.readFile(path.join(__dirname, "signup.html"), (err, data) => {
-    if (err) return res.status(500).send("파일 읽기 오류");
+    if (err) return res.status(500).send("파일 오류");
     res.status(200).set({ "Content-Type": "text/html" }).send(data);
   });
 });
 
-// singup 처리
-app.post("/signup", async (req, res) => {
-  const { userid, name, passwd, email } = req.body;
-  const hashedPassword = await bcrypt.hash(passwd + SECRET_KEY, 10);
-  users.push({ userid, name, email, password: hashedPassword });
-  res.redirect("/login");
-});
-
-// login 페이지 넘겨주기
 app.get("/login", (req, res) => {
   fs.readFile(path.join(__dirname, "login.html"), (err, data) => {
-    if (err) return res.status(500).send("파일 읽기 오류");
+    if (err) return res.status(500).send("파일 오류");
     res.status(200).set({ "Content-Type": "text/html" }).send(data);
   });
 });
 
-// login 처리 및 JWT 발급
+app.get("/signup", (req, res) => {
+  fs.readFile(path.join(__dirname, "signup.html"), (err, data) => {
+    if (err) return res.status(500).send("파일 오류");
+    res.status(200).set({ "Content-Type": "text/html" }).send(data);
+  });
+});
+
+// 회원가입
+app.post("/signup", async (req, res) => {
+  const { userid, passwd, name, email } = req.body;
+  const hashed = await bcrypt.hash(passwd + SECRET_KEY, 10);
+  await createUser(userid, hashed, name, email);
+  res.send(`<script>alert('회원가입 완료'); location.href='/login';</script>`);
+});
+
+// 로그인
 app.post("/login", async (req, res) => {
   const { userid, passwd } = req.body;
+  const users = await getUsers();
   const user = users.find((u) => u.userid === userid);
+  if (!user)
+    return res.send(
+      `<script>alert('존재하지 않는 아이디'); location.href='/login';</script>`
+    );
 
-  if (!user || !(await bcrypt.compare(passwd + SECRET_KEY, user.password))) {
-    return res.send(`
-      <script>
-        alert('아이디 또는 비밀번호가 일치하지 않습니다.');
-        window.location.href = '/login';
-      </script>
-    `);
-  }
+  const isMatch = await bcrypt.compare(passwd + SECRET_KEY, user.userpw);
+  if (!isMatch)
+    return res.send(
+      `<script>alert('비밀번호 오류'); location.href='/login';</script>`
+    );
 
-  const token = jwt.sign({ userid: user.userid }, SECRET_KEY, {
+  const token = jwt.sign({ userid }, SECRET_KEY, {
     expiresIn: config.jwt.expiresInSec,
   });
-
-  res.send(`
-    <script>
-      alert('로그인 성공!');
-      localStorage.setItem('token', '${token}');
-      window.location.href = '/login';
-    </script>
-  `);
+  res.send(
+    `<script>alert('로그인 성공'); localStorage.setItem('token', '${token}'); location.href='/todos';</script>`
+  );
 });
 
-// post 페이지 (JWT 인증 필수)
-app.get("/posts", (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).send("인증 오류: 토큰이 없습니다.");
-  }
+// todos 페이지
+app.get("/todos", (req, res) => {
+  fs.readFile(path.join(__dirname, "todos.html"), (err, data) => {
+    if (err) return res.status(500).send("todos.html 오류");
+    res.status(200).set({ "Content-Type": "text/html" }).send(data);
+  });
+});
 
-  const token = authHeader.split(" ")[1];
+// 전체 할일 조회
+app.get("/api/todos", async (req, res) => {
   try {
+    const token = req.headers.authorization?.split(" ")[1];
     jwt.verify(token, SECRET_KEY);
-    fs.readFile(path.join(__dirname, "post.html"), (err, data) => {
-      if (err) return res.status(500).send("파일 읽기 오류");
-      res.status(200).set({ "Content-Type": "text/html" }).send(data);
-    });
-  } catch (err) {
-    res.status(403).send("유효하지 않은 토큰입니다.");
+    const todos = await getAllTodos();
+    res.json(todos);
+  } catch {
+    res.status(401).send("인증 오류");
   }
 });
 
-// post JSON API
-app.get("/api/posts", (req, res) => {
-  res.json(posts);
+// 할일 추가
+app.post("/api/todos", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    const { userid } = jwt.verify(token, SECRET_KEY);
+    const { dos } = req.body;
+    const id = await createTodo(userid, dos);
+    res.json({ idx: id });
+  } catch {
+    res.status(401).send("인증 오류");
+  }
+});
+
+// 수정
+app.put("/api/todos/:id", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    const { userid } = jwt.verify(token, SECRET_KEY);
+    const todo = await getTodoById(req.params.id);
+    if (!todo || todo.userid !== userid)
+      return res.status(403).send("권한 없음");
+
+    const { dos } = req.body;
+    const result = await updateTodo(req.params.id, dos);
+    res.sendStatus(result ? 200 : 404);
+  } catch {
+    res.status(401).send("인증 오류");
+  }
+});
+
+// 삭제
+app.delete("/api/todos/:id", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    const { userid } = jwt.verify(token, SECRET_KEY);
+    const todo = await getTodoById(req.params.id);
+    if (!todo || todo.userid !== userid)
+      return res.status(403).send("권한 없음");
+
+    const result = await deleteTodo(req.params.id);
+    res.sendStatus(result ? 200 : 404);
+  } catch {
+    res.status(401).send("인증 오류");
+  }
 });
 
 app.listen(PORT, () => {
-  console.log(`서버 실행 중`);
+  console.log(`✅ 서버 실행 중: http://localhost:${PORT}`);
 });

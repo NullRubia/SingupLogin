@@ -13,24 +13,27 @@
         <input type="password" name="passwd" placeholder="비밀번호" required />
         <button type="submit">로그인</button>
       </form>
-      <button id="view-posts">게시물 보기</button>
+
+      <button type="button" onclick="location.href='/signup'">회원가입</button>
+
+      <button id="view-todos" type="button">할일 목록 보기</button>
     </div>
 
     <script>
-      document.getElementById("view-posts").addEventListener("click", () => {
+      document.getElementById("view-todos").addEventListener("click", () => {
         const token = localStorage.getItem("token");
         if (!token) {
           alert("로그인이 필요합니다.");
           return;
         }
 
-        fetch("/posts", {
+        fetch("/todos", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         })
           .then((res) => {
-            if (!res.ok) throw new Error("인증 실패");
+            if (!res.ok) throw new Error("토큰 인증 실패");
             return res.text();
           })
           .then((html) => {
@@ -38,7 +41,10 @@
             document.write(html);
             document.close();
           })
-          .catch(() => alert("토큰 인증 실패 또는 로그인 다시 필요"));
+          .catch((err) => {
+            alert("토큰이 유효하지 않거나 만료되었습니다. 다시 로그인하세요.");
+            localStorage.removeItem("token");
+          });
       });
     </script>
   </body>
